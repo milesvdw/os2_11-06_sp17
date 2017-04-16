@@ -1,0 +1,129 @@
+\documentclass[letterpaper,10pt,draftclsnofoot,onecolumn]{IEEEtran}
+
+\usepackage{graphicx}                                        
+\usepackage{amssymb}                                         
+\usepackage{amsmath}                                         
+\usepackage{amsthm}                                          
+
+\usepackage{alltt}                                           
+\usepackage{float}
+\usepackage{color}
+\usepackage{url}
+
+\usepackage{balance}
+\usepackage[TABBOTCAP, tight]{subfigure}
+\usepackage{enumitem}
+\usepackage{pstricks, pst-node}
+
+\usepackage{geometry}
+\geometry{textheight=8.5in, textwidth=6in, margin=0.75in}
+
+\usepackage{listings}
+\lstset{ %
+   language=C,                   % choose the language of the code
+   basicstyle=\small,              % the size of the fonts that are used for the code
+   keywordstyle=\color{blue},
+   stringstyle=\color{cyan},
+   commentstyle=\color{green},
+   numbers=left,                   % where to put the line-numbers
+   numberstyle=\footnotesize,      % the size of the fonts that are used for the line-numbers
+   stepnumber=1,                   % the step between two line-numbers. If it is 1 each line will be numbered
+   numbersep=5pt,                  % how far the line-numbers are from the code
+   backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+   showspaces=false,               % show spaces adding particular underscores
+   showstringspaces=false,         % underline spaces within strings
+   showtabs=false,                 % show tabs within strings adding particular underscores
+   frame=single,           		   % adds a frame around the code
+   tabsize=2,          			   % sets default tabsize to 2 spaces
+   captionpos=b,           		   % sets the caption-position to bottom
+   breaklines=true,        		   % sets automatic line breaking
+   breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+   escapeinside={\%*}{*)}          % if you want to add a comment within your code
+   }
+
+%random comment
+
+\newcommand{\cred}[1]{{\color{red}#1}}
+\newcommand{\cblue}[1]{{\color{blue}#1}}
+
+\usepackage{hyperref}
+\usepackage{geometry}
+
+\def\name{Alex Wood, Miles Van de Wetering, Arman Hastings}
+
+%pull in the necessary preamble matter for pygments output
+%\input{pygments.tex}
+
+%% The following metadata will show up in the PDF properties
+\hypersetup{
+  colorlinks = true,
+  urlcolor = black,
+  pdfauthor = {\name},
+  pdfkeywords = {cs311 ``operating systems'' files filesystem I/O},
+  pdftitle = {CS 311 Project 1: UNIX File I/O},
+  pdfsubject = {CS 311 Project 1},
+  pdfpagemode = UseNone
+}
+
+\begin{document}
+
+\begin{titlepage}
+   \centering
+	{\scshape\Large Homework 1\par}
+	\vspace{1.5cm}
+	{\huge\bfseries CS 444 Spring 2017 Team 11-06\par}
+	\vspace{2cm}
+	{\Large\itshape \name \par}
+    
+    \date{\today}
+    
+    \vspace{2cm}
+    
+    \begin{abstract}
+ 	This is the first group assignment of CS 344. We have started the project, but need to complete before abstract can be finished. 
+   \end{abstract}
+      
+\end{titlepage}
+
+\tableofcontents
+
+\section{Assignment Description}
+
+\section{Command Log and Descriptions}
+These commands were entered in the tcsh shell on the os-calss.engr.oregonstate.edu
+
+\begin{lstlisting}
+mkdir 11-06
+chmod 777
+git clone git://git.yoctoproject.org/linux-yocto-3.14 to get the yocto build
+chmd 777
+git checkout 'v3.14.26'
+make menuconfig
+cp .config /scratch/spring2017/files/config3.14.26-yocto-qemu .config
+cd ..
+\end{lstlisting}
+Once our Kernel was built, we needed to test it by running it on our virtual machine.The command for launching the VM and our kernel was supplied to us in the assignment. The following command was used:  
+\begin{lstlisting}
+qemu-system-i386 -gdb tcp::6606 -S -nographic -kernel bzImage-qemux86.bin -drive file=core-image-lsb-sdk-qemux86.ext3,if=virtio -enable-kvm -net none -usb -localtime --no-reboot --append "root=/dev/vda rw console=ttyS0 debug".
+
+\end{lstlisting}
+
+\begin{itemize}
+\item "qemu-system-i386" - This is the QEMU invocation command. According to the documentation the expected format of the invocation is "qemu-syste-i386 [options] [disk\_image]" \cite{QEMUDOC1} 
+\item Option 1 "-gdb tcp::6606 -S" - This option is to enable gdb(gdb is the "GNU Debugger") on the the specified device. The device in this case is a TCP port. The port for our team was determined by using the base port umber of 5500, as instructed, plut the value of our team number. Our team is 1106, this gives us the port number 6606. Fianlly the -S switch tells QEMU to not start teh CPU until it is told to, by the gdb console. \cite{QEMUDOC1}
+\item Option 2 "-nographic" - This option simply tells QEMU to run in command line mode(No Graphical User Interface).\cite{QEMUDOC1}
+\item Option 3 "-kernel bzImage-qemux86.bin -drive file=core-image-lsb-sdk-qemux86.ext3" - Indicates to QEMU that a bzimage will be loaded and indicates an open file pointer for the file to load. \cite{QEMUDOC1}
+\item Option 4 "if=virtio -enable-kvm" - This flag tells QEMU that if the virtio is set, to enable the KVM(Keyboard, Video and Mouse control) for the endpoint. \cite{QEMUDOC1}
+\item Option 5 "-net none" - This flag indicates that the QEMU instance does not need to enable network support for the VM\cite{QEMUDOC1}
+\item Option 6 "-usb" - This flag enables the VM's USB driver.\cite{QEMUDOC1}
+\item Option 7 "-localtime" - Sets the VM to use local system time\cite{QEMUDOC1}
+\item Option 8 "--no-reboot" - Tells QEMU to exit instead of rebooting\cite{QEMUDOC1}
+\item Option 9 "--append "root=/dev/vda rw console=ttyS0 debug"." - The This tells QEMU to redirect the serial port adn QEMU monitor to the console.\cite{QEMUDOC1}
+\end{itemize}
+
+\bibliography{mybib}
+\bibliographystyle{ieeetr}
+
+%\input{__mt19937ar.c.tex}
+
+\end{document}
