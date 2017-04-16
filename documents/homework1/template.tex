@@ -98,9 +98,11 @@ chmod 777
 git clone git://git.yoctoproject.org/linux-yocto-3.14 to get the yocto build
 chmd 777
 git checkout 'v3.14.26'
-make menuconfig
 cp .config /scratch/spring2017/files/config3.14.26-yocto-qemu .config
-cd ..
+make menuconfig
+cp /scratch/opt/environment-setup-i586-poky-linux setup\_env
+source setup\_env
+make -j4 all
 \end{lstlisting}
 Once our Kernel was built, we needed to test it by running it on our virtual machine.The command for launching the VM and our kernel was supplied to us in the assignment. The following command was used:  
 \begin{lstlisting}
@@ -120,6 +122,15 @@ qemu-system-i386 -gdb tcp::6606 -S -nographic -kernel bzImage-qemux86.bin -drive
 \item Option 8 "--no-reboot" - Tells QEMU to exit instead of rebooting\cite{QEMUDOC1}
 \item Option 9 "--append "root=/dev/vda rw console=ttyS0 debug"." - The This tells QEMU to redirect the serial port adn QEMU monitor to the console.\cite{QEMUDOC1}
 \end{itemize}
+
+Once the virtual machine was running, we needed to connect to it with GDB in order to continue the halted process. We opened a new shell, connected to os-class, and ran:
+\begin{lstlisting}
+gdb
+target remote localhost:6606
+continue
+\end{lstlisting}
+
+then the qemu shell resumes its operations. We login as root, and use the uname command to display the version number.
 
 \bibliography{mybib}
 \bibliographystyle{ieeetr}

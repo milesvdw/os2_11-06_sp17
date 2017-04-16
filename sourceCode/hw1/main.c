@@ -8,18 +8,69 @@
 * Citations: 
 ******************************************************************************/
 #include "main.h"
+#define true 1
+#define false 0
 
-void producer();
-void consumer();
-
+void* producer(void*);
+void* consumer(void*);
+int gen_rand(int, int);
+void seed_rand();
+myBuff *buffer;
+int buffCount = 0;
+pthread_mutex_t lock;
 
 int main(int argc, char *argv)
 {
+	seed_rand();
 
+
+	pthread_t consumer_id;
+	pthread_t producer_id;
+
+	//initialize the mutex and buffer
+	if (pthread_mutex_init(&lock, NULL) != 0)
+    	{
+        	printf("\n mutex init failed\n");
+     		return 1;
+    	}
+	buffer = malloc(sizeof(struct myBuff) * 32);
+
+	//spin up the threads
+	int create_consumer_err = pthread_create(&consumer_id, NULL, &consumer, NULL);
+	if (create_consumer_err != 0)
+            printf("\ncan't create consumer thread :[%s]", strerror(create_consumer_err));
+
+	int create_producer_err = pthread_create(&producer_id, NULL, &producer, NULL);
+        if (create_producer_err != 0)
+            printf("\ncan't create producer thread :[%s]", strerror(create_producer_err));
+
+	//collect threads and clear out memory
+	pthread_join(consumer_id, NULL);
+	pthread_join(producer_id, NULL);
+	pthread_mutex_destroy(&lock);
+	free(buffer);
 	
-
 	return 0;
 
+}
+
+void seed_rand() {
+	#ifdef __i386__
+	srand(time(NULL));
+	#else
+	//mercedes twister alternative
+	#endif
+}
+
+//create a random number between floor and ceiling, inclusive
+int gen_rand(int floor, int ceiling) {
+	#ifdef __i386__
+	srand(time(NULL));
+	return int(rand() % ((ceiling-floor)+1)) + floor;
+	#else
+	//mercedes twister alternative
+	return 5;
+	#endif
 }
 
 /******************************************************************************
@@ -29,9 +80,35 @@ int main(int argc, char *argv)
 * parameters: 
 * Output: 
 ******************************************************************************/
-void producer()
+void* producer(void* thread1)
 {
+	while(true) {
+		myBuff item;
+		item.value = gen_rand(0, 10);
+		item.waitTime = gen_rand(2, 9);
+		
+		//try to push the item to the buffer
+		while(true) {
+			pthread_mutex_lock(&lock);
+			//if the buffer is full, unlock to prevent deadlocking
+			//and wait for a bit before trying again
+			if(buffCount == 32) {
+				pthread_mutex_unlock(&lock);
+				sleep(1);
+			}
+			//if there is room, push, unlock, move on
+			else {
+				printf("producing item with value %d\n", item.value);
+				buffer[buffCount] = item;
+				buffCount = buffCount + 1;
+				pthread_mutex_unlock(&lock);
+				break;
+			}
 
+		}
+		int wait_time = gen_rand(3, 7);
+		sleep(wait_time);
+	}
 }
 
 /******************************************************************************
@@ -41,22 +118,28 @@ void producer()
 * parameters:
 * Output:
 ******************************************************************************/
-void consumer()
+void* consumer(void* thread2)
 {
-
+	while(true) {
+		//try to pull an item from the buffer
+		while(true) {
+			pthread_mutex_lock(&lock);
+			if(buffCount > 0) {
+				myBuff item = buffer[buffCount-1];
+				buffCount = buffCount - 1;
+				pthread_mutex_unlock(&lock);
+				printf("consuming... this will take %d seconds\n", item.waitTime);
+				sleep(item.waitTime);
+				printf("yum! the value was %d\n", item.value);
+				pthread_mutex_unlock(&lock);
+				break;
+			} else {
+				pthread_mutex_unlock(&lock);
+				sleep(1);
+			}
+		}		
+	}
 }
-
-/*******************************************************************************
-* Team     : 11-06
-* Term     : Spring 2017
-* Class    : CS444
-* Names    : Alex Wood, Miles Van de Wetering, Arman Hastings
-* File Name: main.c
-* Purpose  : This file implements the solution to the producer consumer problem
-* Citations: Mersenne Twister: https://en.wikipedia.org/wiki/Mersenne_Twister
-******************************************************************************/
-
-#include "main.h"
 
 //Mersenne Twister MT19937 constants for 32-bit range
 enum

@@ -14,8 +14,16 @@
 #include <stdlib.h>
 
 #include <stdint.h>			//For Mersenne Twister
+#include <pthread.h>
+#include <unistd.h>
+#include <time.h>
 
-struct myBuff
+#ifdef __i386__
+#include <rdrand.h>
+#endif
+
+
+typedef struct myBuff
 {
 	int value;
 	int waitTime;
