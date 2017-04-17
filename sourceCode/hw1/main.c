@@ -19,6 +19,10 @@ myBuff *buffer;
 int buffCount = 0;
 pthread_mutex_t lock;
 
+void Initialize(const int32_t seed);
+static void Twist();
+int32_t ExtracU32();
+
 int main(int argc, char *argv)
 {
 	seed_rand();
@@ -59,6 +63,8 @@ void seed_rand() {
 	srand(time(NULL));
 	#else
 	//mercedes twister alternative
+	uint32_t seed = time(NULL);
+	 Initialize(seed);
 	#endif
 }
 
@@ -69,7 +75,11 @@ int gen_rand(int floor, int ceiling) {
 	return int(rand() % ((ceiling-floor)+1)) + floor;
 	#else
 	//mercedes twister alternative
-	return 5;
+	//return 5;
+	int tmpInt;
+	tmpInt = ExtracU32();
+
+	tmpInt = tmpInt % ((ceiling - floor) + 1) + floor; 
 	#endif
 }
 
@@ -170,9 +180,9 @@ static uint32_t mt[N];
 static uint16_t index;
 
 //Function to re-initialize with new seed
-void Initialize(const uint32_t seed)
+void Initialize(const int32_t seed)
 {
-	uint32_t i;
+	int32_t i;
 
 	mt[0] = seed;
 
@@ -188,7 +198,7 @@ void Initialize(const uint32_t seed)
 //Function to initiate "Twist"
 static void Twist()
 {
-	uint32_t i, x, xA;
+	int32_t i, x, xA;
 
 	for (i = 0; i < N; i++)
 	{
@@ -208,9 +218,9 @@ static void Twist()
 }
 
 //Get a psuedo random 32-bit unsigned integer
-uint32_t ExtracU32()
+int32_t ExtracU32()
 {
-	uint32_t y;
+	int32_t y;
 	int i = index;
 
 	if (index >= N)
