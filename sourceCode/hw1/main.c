@@ -62,7 +62,7 @@ void seed_rand() {
 	#ifdef __i386__
 	srand(time(NULL));
 	#else
-	//mercedes twister alternative
+	//Mersenne twister alternative
 	uint32_t seed = time(NULL);
 	 Initialize(seed);
 	#endif
@@ -74,7 +74,7 @@ int gen_rand(int floor, int ceiling) {
 	srand(time(NULL));
 	return int(rand() % ((ceiling-floor)+1)) + floor;
 	#else
-	//mercedes twister alternative
+	//Mersenne twister alternative
 	//return 5;
 	int tmpInt;
 	tmpInt = ExtracU32();
@@ -155,20 +155,25 @@ void* consumer(void* thread2)
 enum
 {
 	//Coefficiants for MT 19937-64
-	N = 624,			//degree of recurrence
-	M = 397,			//middle word, an offset used in recurrence relation 
-						//defining series x, 1<=m<=n
-	R = 31,				//Seperation point of one word, or number of bits of 
-						//the lower bit mask, 0<= r <= w - 1
-	A = 0x9908b0df,		//Coefficients of the rational normal form twist matrix
-	F = 1812433253,		//Value for MT19937 for 32-bit
-	U = 11,				//Additional Mersenne Twister tempering bit shifts/masks
-						//Twisted Generalised Feedback Shift Register = TGFSR 
-						//(R) = Rational form
+	N = 624,			// degree of recurrence
+	M = 397,			// middle word, an offset used in 
+					// recurrence relation 
+					// defining series x, 1<=m<=n
+	R = 31,				// Seperation point of one word, or 
+					// number of bits of the lower bit mask,
+					// 0<= r <= w - 1
+	A = 0x9908b0df,			//Coefficients of the rational normal
+       					//form twist matrix
+	F = 1812433253,			//Value for MT19937 for 32-bit
+	U = 11,				//Additional Mersenne Twister tempering
+       					//bit shifts/masks
+					//Twisted Generalised Feedback Shift
+					// Register = TGFSR 
+					//(R) = Rational form
 	S = 7,				//TGFSR(R) tempering bit shifts
-	B = 0x9d2c5680,		//TGSFR(R) tempering bitmasks
+	B = 0x9d2c5680,			//TGSFR(R) tempering bitmasks
 	T = 15,				//TGSFR(R) tempering bit shifts 
-	C = 0xefc60000,		//TGSFR(R) tempering bitmasks
+	C = 0xefc60000,			//TGSFR(R) tempering bitmasks
 	L = 18,				//TGSFR(R) tempering bit shifts 
 
 	MASK_LOWER = (1ull << R) - 1,
