@@ -23,13 +23,32 @@ void Initialize(const int32_t seed);
 static void Twist();
 int32_t ExtracU32();
 
-int main(int argc, char *argv)
+int main(int argc, char *argv[])
 {
 	seed_rand();
 
 
-	pthread_t consumer_id;
-	pthread_t producer_id;
+	int i;
+	int conCount = 1;
+	int prodCount = 1;
+	//command line processing code suggested by http://courses.cms.caltech.edu/cs11/material/c/mike/misc/cmdline_args.html
+	for (i = 1; i < argc; i++)  /* Skip argv[0] (program name). */
+    	{
+        	if (strcmp(argv[i], "-c") == 0)  /* Process optional arguments. */
+        	{
+			conCount = (int)strtol(argv[i+1], NULL, 10);
+			i++;
+        	} else if (strcmp(argv[i], "-p") == 0)
+		{
+			prodCount = (int)strtol(argv[i+1], NULL, 10);
+			i++;
+		} else if (strcmp(argv[0], argv[i]) != 0) {
+			printf("usage is: %s [-c numConsumers] [-p numProducers]", argv[0]);
+			return; //abort due to incorrect usage
+		}
+    	}
+	pthread_t *consumer_ids = malloc(sizeof(pthread_t)*conCount);
+	pthread_t *producer_ids = malloc(sizeof(pthread_t)*prodCount);
 
 	//initialize the mutex and buffer
 	if (pthread_mutex_init(&lock, NULL) != 0)
@@ -39,21 +58,30 @@ int main(int argc, char *argv)
     	}
 	buffer = malloc(sizeof(struct myBuff) * 32);
 
-	//spin up the threads
-	int create_consumer_err = pthread_create(&consumer_id, NULL, &consumer, NULL);
-	if (create_consumer_err != 0)
-            printf("\ncan't create consumer thread :[%s]", strerror(create_consumer_err));
 
-	int create_producer_err = pthread_create(&producer_id, NULL, &producer, NULL);
-        if (create_producer_err != 0)
-            printf("\ncan't create producer thread :[%s]", strerror(create_producer_err));
+	for (i = 0; i < conCount; i++) {	
+		//spin up the threads
+		int create_consumer_err = pthread_create(&consumer_ids[i], NULL, &consumer, NULL);
+		if (create_consumer_err != 0)
+	        	printf("\ncan't create consumer thread :[%s]", strerror(create_consumer_err));
+	}
 
+	for (i = 0; i < prodCount; i++) {
+		int create_producer_err = pthread_create(&producer_ids[i], NULL, &producer, NULL);
+	        if (create_producer_err != 0)
+	        	printf("\ncan't create producer thread :[%s]", strerror(create_producer_err));
+	}
+	
+	
 	//collect threads and clear out memory
-	pthread_join(consumer_id, NULL);
-	pthread_join(producer_id, NULL);
+	for (i = 0; i < conCount; i ++)
+		pthread_join(consumer_ids[i], NULL);
+	for (i = 0; i < prodCount; i ++)
+		pthread_join(producer_ids[i], NULL);
 	pthread_mutex_destroy(&lock);
 	free(buffer);
-	
+	free(consumer_ids);
+	free(producer_ids);	
 	return 0;
 
 }
