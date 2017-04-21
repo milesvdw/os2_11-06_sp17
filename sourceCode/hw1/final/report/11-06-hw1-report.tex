@@ -1,0 +1,173 @@
+\documentclass[letterpaper,10pt,draftclsnofoot,onecolumn]{IEEEtran}
+
+\usepackage{graphicx}                                        
+\usepackage{amssymb}                                         
+\usepackage{amsmath}                                         
+\usepackage{amsthm}                                          
+
+\usepackage{alltt}                                           
+\usepackage{float}
+\usepackage{color}
+\usepackage{url}
+
+\usepackage{balance}
+\usepackage[TABBOTCAP, tight]{subfigure}
+\usepackage{enumitem}
+\usepackage{pstricks, pst-node}
+
+\usepackage{geometry}
+\geometry{textheight=8.5in, textwidth=6in, margin=0.75in}
+
+\usepackage{listings}
+\lstset{ %
+   language=C,                   % choose the language of the code
+   basicstyle=\small,              % the size of the fonts that are used for the code
+   keywordstyle=\color{blue},
+   stringstyle=\color{cyan},
+   commentstyle=\color{green},
+   numbers=left,                   % where to put the line-numbers
+   numberstyle=\footnotesize,      % the size of the fonts that are used for the line-numbers
+   stepnumber=1,                   % the step between two line-numbers. If it is 1 each line will be numbered
+   numbersep=5pt,                  % how far the line-numbers are from the code
+   backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+   showspaces=false,               % show spaces adding particular underscores
+   showstringspaces=false,         % underline spaces within strings
+   showtabs=false,                 % show tabs within strings adding particular underscores
+   frame=single,           		   % adds a frame around the code
+   tabsize=2,          			   % sets default tabsize to 2 spaces
+   captionpos=b,           		   % sets the caption-position to bottom
+   breaklines=true,        		   % sets automatic line breaking
+   breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+   escapeinside={\%*}{*)}          % if you want to add a comment within your code
+   }
+
+%random comment
+
+\newcommand{\cred}[1]{{\color{red}#1}}
+\newcommand{\cblue}[1]{{\color{blue}#1}}
+
+\usepackage{hyperref}
+\usepackage{geometry}
+\title{Team 11-06 Homework 1}
+\def\name{Alex Wood, Miles Van de Wetering, Arman Hastings}
+
+%pull in the necessary preamble matter for pygments output
+%\input{pygments.tex}
+
+%% The following metadata will show up in the PDF properties
+\hypersetup{
+  colorlinks = true,
+  urlcolor = black,
+  pdfauthor = {\name},
+  pdfkeywords = {cs311 ``operating systems'' files filesystem I/O},
+  pdftitle = {CS 311 Project 1: UNIX File I/O},
+  pdfsubject = {CS 311 Project 1},
+  pdfpagemode = UseNone
+}
+
+\begin{document}
+
+\begin{titlepage}
+   \centering
+	{\scshape\Large Homework 1\par}
+	\vspace{1.5cm}
+	{\huge\bfseries CS 444 Spring 2017 Team 11-06\par}
+	\vspace{2cm}
+	{\Large\itshape \name \par}
+    
+    \date{\today}
+    
+    \vspace{2cm}
+    
+    \begin{abstract}
+ 	This is the report for group 11-06's homework 1. This document covers all required writings for homework one. In this assignment our team setup our shared workspace on the os-class sever, setup a git repository, and completed a concurrency assignment using the C language. This assignment was completed as a group effort working both in person and remotely.
+   \end{abstract}
+      
+\end{titlepage}
+
+\tableofcontents
+
+\newpage
+
+\section{Assignment Description}
+The first homework is made up of two parts, the first build and run of the YOCTO kernel on a QEMU virtual machine, and the second a concurrency exercise. Theses tasks were to be completed by teams of three students working together. 
+\section{Yocto Kernel build and QEMU VM}
+These commands were entered in the tcsh shell on the os-calss.engr.oregonstate.edu in order to pull the desired repository, create the appropriate directory structure, to build the kernel, and to launch the VM with our kernel build. 
+
+\begin{lstlisting}
+mkdir 11-06
+chmod 777
+git clone git://git.yoctoproject.org/linux-yocto-3.14 to get the yocto build
+chmd 777
+git checkout 'v3.14.26'
+cp .config /scratch/spring2017/files/config3.14.26-yocto-qemu .config
+make menuconfig
+cp /scratch/opt/environment-setup-i586-poky-linux setup\_env
+source setup\_env
+make -j4 all
+\end{lstlisting}
+Once our Kernel was built, we needed to test it by running it on our virtual machine.The command for launching the VM and our kernel was supplied to us in the assignment. The following command was used:  
+\begin{lstlisting}
+qemu-system-i386 -gdb tcp::6606 -S -nographic -kernel bzImage-qemux86.bin -drive file=core-image-lsb-sdk-qemux86.ext3,if=virtio -enable-kvm -net none -usb -localtime --no-reboot --append "root=/dev/vda rw console=ttyS0 debug".
+
+\end{lstlisting}
+
+\begin{itemize}
+\item "qemu-system-i386" - This is the QEMU invocation command. According to the documentation the expected format of the invocation is "qemu-syste-i386 [options] [disk\_image]" \cite{QEMUDOC1} 
+\item Option 1 "-gdb tcp::6606 -S" - This option is to enable gdb(gdb is the "GNU Debugger") on the the specified device. The device in this case is a TCP port. The port for our team was determined by using the base port umber of 5500, as instructed, plut the value of our team number. Our team is 1106, this gives us the port number 6606. Fianlly the -S switch tells QEMU to not start teh CPU until it is told to, by the gdb console. \cite{QEMUDOC1}
+\item Option 2 "-nographic" - This option simply tells QEMU to run in command line mode(No Graphical User Interface).\cite{QEMUDOC1}
+\item Option 3 "-kernel bzImage-qemux86.bin -drive file=core-image-lsb-sdk-qemux86.ext3" - Indicates to QEMU that a bzimage will be loaded and indicates an open file pointer for the file to load. \cite{QEMUDOC1}
+\item Option 4 "if=virtio -enable-kvm" - This flag tells QEMU that if the virtio is set, to enable the KVM(Keyboard, Video and Mouse control) for the endpoint. \cite{QEMUDOC1}
+\item Option 5 "-net none" - This flag indicates that the QEMU instance does not need to enable network support for the VM\cite{QEMUDOC1}
+\item Option 6 "-usb" - This flag enables the VM's USB driver.\cite{QEMUDOC1}
+\item Option 7 "-localtime" - Sets the VM to use local system time\cite{QEMUDOC1}
+\item Option 8 "--no-reboot" - Tells QEMU to exit instead of rebooting\cite{QEMUDOC1}
+\item Option 9 "--append "root=/dev/vda rw console=ttyS0 debug"." - The This tells QEMU to redirect the serial port adn QEMU monitor to the console.\cite{QEMUDOC1}
+\end{itemize}
+
+Once the virtual machine was running, we needed to connect to it with GDB in order to continue the halted process. We opened a new shell, connected to os-class, and ran:
+\begin{lstlisting}
+gdb
+target remote localhost:6606
+continue
+\end{lstlisting}
+
+then the qemu shell resumes its operations. We login as root, and use the uname command to display the version number.
+
+\section{Concurrency 1: The Producer-Consumer Problem}
+The producer-consumer problem was the focus of the first concurrency assignment. In the assignment teams were asked to create a program in which p-threads are used. One thread to produce random numbers in a shared memory space, then a second thread that reads memory space to consume that value. These threads needed to prevent the other thread from accessing the memory while one thread was reading (and consuming) or the other was writing to the shared memory space. The consumer would use the random number predetermined by the producer (depending on system the producer uses rdrand if present or an implementation of the Mersenne Twister discussed later) to determine the time it would take before it consumed a character from the shared memory space (between 3 and 7 seconds). The Producers job was to generate a random number using one of the two prescribed methods and to block the memory space so as to write the new value between 0 and 10.
+The function rdrand is widely supported, but not always, thus we were asked to implement both methods. This is accomplished by testing for a macro "\_\_i386\_\_" to indicate weather or not the rdrand function would be present. When this macro is undefined, we implement random numbers via the Mersenne Twister algorithm. According to Wikipedia it is the most widely used general purpose pseudo random number generator.
+
+Answers to questions on assignment.
+\begin{enumerate}
+\item The main point of the concurrency assignment was to get the students thinking about creating threads and managing the use of shared memory space. The assignment also aims to get the students to be ready to use unfamiliar tools and methods to account for differences between system architectures.
+
+\item Our approach to the problem was first to take some time to understand what was being asked, and to fill in any gaps in our knowledge in how to accomplish the task. After spending some time independently working on the problem, we met as a team on Google Hangouts to hammer out a solution. The instructions limited us to the use of C and ASM to create a solution. We created a basic console application with one source file and one header file.  The Mersenne Twister algorithm we used was from \url{https://en.wikipedia.org/wiki/Mersenne_Twister}. With a little modification this algorithm worked well within our program.The producer and consumer were both "void *" types and took "void *" as arguments. In order to fulfill the synchronization requirements of the exercise we used the C mutex to control access to shared resources. 
+
+\item The testing phase of this project was relatively limited due to the lack of interaction with the application. To figure out how to use the Mersenne Twister  implementation, we wrote a small program to initialize, seed, and output values from the PRNG. Once this was completed, we used the modulo operation to restrict the output of the PRNG to the range we needed in each instance. During the implementation we used console output to indicate when each process did its tasks, and the results of those tasks. The output of the program matched the expected output of the program, thus validating functionality. 
+
+\item We learned a lot about the QEMU invocation command, and about p-threads. This was new information for some of us, and familiar to others. With a little research, all team members had a good grasp of what we did and why we did it. We learned that we need to learn how to manage permissions better in Linux for our group folder. 
+
+\end{enumerate}
+
+\section{Worklog}
+\begin{tabular}{| p{2.1in} | p{2.3in} | p{2.1in} |}
+\hline
+Who & What & When \\
+\hline
+Alex, Arman, Miles & Worked on getting our group folder setup, pulling the YOCTO repo, creating our repo, building the kernel and running the QEMU VM to test. & Tuesday April 11, 11-1150am\\
+\hline
+Alex & Investigated Mersenne Twister and how to use it within a C program & Friday April 14, Off and on throughout the day\\
+\hline
+Miles & Alex wrote the concurrency functions and implemented the Mersenne Twister algorithm from Wikipedia & Sunday April 16, 10am-12pm\\
+\hline
+Alex & Modified the rdrand check to use the example from the website. This new method checks macros and the cpuid value to determin if rdrand can be used & Friday April 21, 7-8am \\
+\hline
+
+\end{tabular}
+\bibliography{mybib}
+\bibliographystyle{ieeetr}
+
+%\input{__mt19937ar.c.tex}
+
+\end{document}
