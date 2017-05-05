@@ -1,0 +1,240 @@
+diff -Nurp ../old_block/Kconfig.iosched ./block/Kconfig.iosched
+--- ../old_block/Kconfig.iosched	2017-05-04 19:23:41.270055347 -0700
++++ ./block/Kconfig.iosched	2017-05-04 19:48:48.482880407 -0700
+@@ -13,10 +13,10 @@ config IOSCHED_NOOP
+ 	  the kernel.
+ 
+ config IOSCHED_SSTF
+-       bool
+-       default y
+-       ---help---
+-         Our sstf IO scheduler
++	bool
++	default y
++	---help---
++	  Our sstf IO scheduler
+ 
+ config IOSCHED_DEADLINE
+ 	tristate "Deadline I/O scheduler"
+diff -Nurp ../old_block/Makefile ./block/Makefile
+--- ../old_block/Makefile	2017-05-04 19:23:40.257038676 -0700
++++ ./block/Makefile	2017-05-04 19:48:48.483880424 -0700
+@@ -14,6 +14,7 @@ obj-$(CONFIG_BLK_DEV_BSGLIB)	+= bsg-lib.
+ obj-$(CONFIG_BLK_CGROUP)	+= blk-cgroup.o
+ obj-$(CONFIG_BLK_DEV_THROTTLING)	+= blk-throttle.o
+ obj-$(CONFIG_IOSCHED_NOOP)	+= noop-iosched.o
++obj-$(CONFIG_IOSCHED_SSTF)	+= sstf-iosched.o
+ obj-$(CONFIG_IOSCHED_DEADLINE)	+= deadline-iosched.o
+ obj-$(CONFIG_IOSCHED_CFQ)	+= cfq-iosched.o
+ 
+diff -Nurp ../old_block/Makefile.orig ./block/Makefile.orig
+--- ../old_block/Makefile.orig	1969-12-31 16:00:00.000000000 -0800
++++ ./block/Makefile.orig	2017-05-04 19:34:20.054571745 -0700
+@@ -0,0 +1,23 @@
++#
++# Makefile for the kernel block layer
++#
++
++obj-$(CONFIG_BLOCK) := elevator.o blk-core.o blk-tag.o blk-sysfs.o \
++			blk-flush.o blk-settings.o blk-ioc.o blk-map.o \
++			blk-exec.o blk-merge.o blk-softirq.o blk-timeout.o \
++			blk-iopoll.o blk-lib.o blk-mq.o blk-mq-tag.o \
++			blk-mq-sysfs.o blk-mq-cpu.o blk-mq-cpumap.o ioctl.o \
++			genhd.o scsi_ioctl.o partition-generic.o partitions/
++
++obj-$(CONFIG_BLK_DEV_BSG)	+= bsg.o
++obj-$(CONFIG_BLK_DEV_BSGLIB)	+= bsg-lib.o
++obj-$(CONFIG_BLK_CGROUP)	+= blk-cgroup.o
++obj-$(CONFIG_BLK_DEV_THROTTLING)	+= blk-throttle.o
++obj-$(CONFIG_IOSCHED_NOOP)	+= noop-iosched.o
++obj-$(CONFIG_IOSCHED_SSTF)	+= sstf-iosched.o
++obj-$(CONFIG_IOSCHED_DEADLINE)	+= deadline-iosched.o
++obj-$(CONFIG_IOSCHED_CFQ)	+= cfq-iosched.o
++
++obj-$(CONFIG_BLOCK_COMPAT)	+= compat_ioctl.o
++obj-$(CONFIG_BLK_DEV_INTEGRITY)	+= blk-integrity.o
++obj-$(CONFIG_BLK_CMDLINE_PARSER)	+= cmdline-parser.o
+diff -Nurp ../old_block/sstf-iosched.c ./block/sstf-iosched.c
+--- ../old_block/sstf-iosched.c	1969-12-31 16:00:00.000000000 -0800
++++ ./block/sstf-iosched.c	2017-05-04 19:48:48.494880605 -0700
+@@ -0,0 +1,179 @@
++/*
++ * elevator sstf
++ */
++#include <linux/blkdev.h>
++#include <linux/elevator.h>
++#include <linux/bio.h>
++#include <linux/module.h>
++#include <linux/slab.h>
++#include <linux/init.h>
++
++struct sstf_data {
++	struct list_head queue;
++	sector_t last_dispatched;
++	int direction; // 1 => forward, 0 => backward
++};
++
++static void sstf_merged_requests(struct request_queue *q, struct request *rq,
++				 struct request *next)
++{
++	list_del_init(&next->queuelist);
++}
++
++static struct request* find_next(struct request_queue *q, struct sstf_data *nd) {
++                struct request *entry;
++		struct list_head *ptr;
++		int found = 0;
++		if(nd->direction == 1) {
++                        list_for_each(ptr, &nd->queue) {
++                                entry = list_entry(ptr, struct request, queuelist);
++                                if(entry->bio->bi_iter.bi_sector > nd->last_dispatched) {
++                                        found = 1;
++                                        break;
++                                }
++                        }
++                } else {
++                        list_for_each_prev(ptr, &nd->queue) {
++                                entry = list_entry(ptr, struct request, queuelist);
++                                if(entry->bio->bi_iter.bi_sector < nd->last_dispatched) {
++                                        found = 1;
++                                        break;
++                                }
++
++                        }
++
++                }
++		if(found) return entry;
++		else return NULL;
++}
++
++static int sstf_dispatch(struct request_queue *q, int force)
++{
++	struct sstf_data *nd = q->elevator->elevator_data;
++	struct request *entry;
++	if (!list_empty(&nd->queue)) {
++
++		entry = find_next(q, nd);
++		if(entry == NULL) {
++			if(nd->direction == 1) nd->direction = 0; //this means we need to reverse directions
++			else nd->direction = 1;
++			entry = find_next(q, nd); //and search again
++		}
++		
++		list_del_init(&entry->queuelist);
++		elv_dispatch_sort(q, entry);
++		if(rq_data_dir(entry) == READ)
++			printk("[CLOOK] dsp R %ld", (long int)entry->bio->bi_iter.bi_sector);
++		else
++			printk("[CLOOK] dsp W %ld", (long int)entry->bio->bi_iter.bi_sector);
++		return 1;
++	}
++	return 0;
++}
++
++//insert a new read request into the queue
++//maintain sorted order
++static void sstf_add_request(struct request_queue *q, struct request *rq)
++{
++	struct sstf_data *nd = q->elevator->elevator_data;
++	//iterate through the requests, insert at correct place
++	struct request *entry;
++	struct list_head *ptr;
++	list_for_each(ptr, &nd->queue) {
++		entry = list_entry(ptr, struct request, queuelist);
++        	if (entry->bio->bi_iter.bi_sector > rq->bio->bi_iter.bi_sector) {
++            		break;
++        	}
++	}
++	list_add_tail(&rq->queuelist, ptr);
++        if(rq_data_dir(rq) == READ)
++	        printk("[CLOOK] add R %ld", (int)rq->bio->bi_iter.bi_sector);
++        else
++        	printk("[CLOOK] add W %ld", (int)rq->bio->bi_iter.bi_sector);
++
++}
++
++static struct request *
++sstf_former_request(struct request_queue *q, struct request *rq)
++{
++	struct sstf_data *nd = q->elevator->elevator_data;
++
++	if (rq->queuelist.prev == &nd->queue)
++		return NULL;
++	return list_entry(rq->queuelist.prev, struct request, queuelist);
++}
++
++static struct request *
++sstf_latter_request(struct request_queue *q, struct request *rq)
++{
++	struct sstf_data *nd = q->elevator->elevator_data;
++
++	if (rq->queuelist.next == &nd->queue)
++		return NULL;
++	return list_entry(rq->queuelist.next, struct request, queuelist);
++}
++
++static int sstf_init_queue(struct request_queue *q, struct elevator_type *e)
++{
++	struct sstf_data *nd;
++	struct elevator_queue *eq;
++
++	eq = elevator_alloc(q, e);
++	if (!eq)
++		return -ENOMEM;
++
++	nd = kmalloc_node(sizeof(*nd), GFP_KERNEL, q->node);
++	if (!nd) {
++		kobject_put(&eq->kobj);
++		return -ENOMEM;
++	}
++	eq->elevator_data = nd;
++
++	INIT_LIST_HEAD(&nd->queue);
++	nd->direction = 1;
++	nd->last_dispatched = 0;
++	spin_lock_irq(q->queue_lock);
++	q->elevator = eq;
++	spin_unlock_irq(q->queue_lock);
++	return 0;
++}
++
++static void sstf_exit_queue(struct elevator_queue *e)
++{
++	struct sstf_data *nd = e->elevator_data;
++
++	BUG_ON(!list_empty(&nd->queue));
++	kfree(nd);
++}
++
++static struct elevator_type elevator_sstf = {
++	.ops = {
++		.elevator_merge_req_fn		= sstf_merged_requests,
++		.elevator_dispatch_fn		= sstf_dispatch,
++		.elevator_add_req_fn		= sstf_add_request,
++		.elevator_former_req_fn		= sstf_former_request,
++		.elevator_latter_req_fn		= sstf_latter_request,
++		.elevator_init_fn		= sstf_init_queue,
++		.elevator_exit_fn		= sstf_exit_queue,
++	},
++	.elevator_name = "sstf",
++	.elevator_owner = THIS_MODULE,
++};
++
++static int __init sstf_init(void)
++{
++	return elv_register(&elevator_sstf);
++}
++
++static void __exit sstf_exit(void)
++{
++	elv_unregister(&elevator_sstf);
++}
++
++module_init(sstf_init);
++module_exit(sstf_exit);
++
++
++MODULE_AUTHOR("Miles Van de Wetering");
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("SSTF IO scheduler");
+Binary files ../old_block/sstf-iosched.o and ./block/sstf-iosched.o differ
