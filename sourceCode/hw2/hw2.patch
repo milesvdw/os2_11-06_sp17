@@ -1,24 +1,22 @@
-diff -Nurp ../old_block/Kconfig.iosched ./block/Kconfig.iosched
---- ../old_block/Kconfig.iosched	2017-05-04 19:23:41.270055347 -0700
-+++ ./block/Kconfig.iosched	2017-05-04 19:48:48.482880407 -0700
-@@ -13,10 +13,10 @@ config IOSCHED_NOOP
+diff -Nurp ../old_block/Kconfig.iosched block/Kconfig.iosched
+--- ../old_block/Kconfig.iosched	2017-05-08 11:44:00.220841164 -0700
++++ block/Kconfig.iosched	2017-05-08 11:44:07.505960229 -0700
+@@ -12,6 +12,12 @@ config IOSCHED_NOOP
+ 	  that do their own scheduling and require only minimal assistance from
  	  the kernel.
  
- config IOSCHED_SSTF
--       bool
--       default y
--       ---help---
--         Our sstf IO scheduler
++config IOSCHED_SSTF
 +	bool
 +	default y
 +	---help---
 +	  Our sstf IO scheduler
- 
++
  config IOSCHED_DEADLINE
  	tristate "Deadline I/O scheduler"
-diff -Nurp ../old_block/Makefile ./block/Makefile
---- ../old_block/Makefile	2017-05-04 19:23:40.257038676 -0700
-+++ ./block/Makefile	2017-05-04 19:48:48.483880424 -0700
+ 	default y
+diff -Nurp ../old_block/Makefile block/Makefile
+--- ../old_block/Makefile	2017-05-08 11:44:00.210840999 -0700
++++ block/Makefile	2017-05-08 11:44:07.512960344 -0700
 @@ -14,6 +14,7 @@ obj-$(CONFIG_BLK_DEV_BSGLIB)	+= bsg-lib.
  obj-$(CONFIG_BLK_CGROUP)	+= blk-cgroup.o
  obj-$(CONFIG_BLK_DEV_THROTTLING)	+= blk-throttle.o
@@ -27,37 +25,10 @@ diff -Nurp ../old_block/Makefile ./block/Makefile
  obj-$(CONFIG_IOSCHED_DEADLINE)	+= deadline-iosched.o
  obj-$(CONFIG_IOSCHED_CFQ)	+= cfq-iosched.o
  
-diff -Nurp ../old_block/Makefile.orig ./block/Makefile.orig
---- ../old_block/Makefile.orig	1969-12-31 16:00:00.000000000 -0800
-+++ ./block/Makefile.orig	2017-05-04 19:34:20.054571745 -0700
-@@ -0,0 +1,23 @@
-+#
-+# Makefile for the kernel block layer
-+#
-+
-+obj-$(CONFIG_BLOCK) := elevator.o blk-core.o blk-tag.o blk-sysfs.o \
-+			blk-flush.o blk-settings.o blk-ioc.o blk-map.o \
-+			blk-exec.o blk-merge.o blk-softirq.o blk-timeout.o \
-+			blk-iopoll.o blk-lib.o blk-mq.o blk-mq-tag.o \
-+			blk-mq-sysfs.o blk-mq-cpu.o blk-mq-cpumap.o ioctl.o \
-+			genhd.o scsi_ioctl.o partition-generic.o partitions/
-+
-+obj-$(CONFIG_BLK_DEV_BSG)	+= bsg.o
-+obj-$(CONFIG_BLK_DEV_BSGLIB)	+= bsg-lib.o
-+obj-$(CONFIG_BLK_CGROUP)	+= blk-cgroup.o
-+obj-$(CONFIG_BLK_DEV_THROTTLING)	+= blk-throttle.o
-+obj-$(CONFIG_IOSCHED_NOOP)	+= noop-iosched.o
-+obj-$(CONFIG_IOSCHED_SSTF)	+= sstf-iosched.o
-+obj-$(CONFIG_IOSCHED_DEADLINE)	+= deadline-iosched.o
-+obj-$(CONFIG_IOSCHED_CFQ)	+= cfq-iosched.o
-+
-+obj-$(CONFIG_BLOCK_COMPAT)	+= compat_ioctl.o
-+obj-$(CONFIG_BLK_DEV_INTEGRITY)	+= blk-integrity.o
-+obj-$(CONFIG_BLK_CMDLINE_PARSER)	+= cmdline-parser.o
-diff -Nurp ../old_block/sstf-iosched.c ./block/sstf-iosched.c
+diff -Nurp ../old_block/sstf-iosched.c block/sstf-iosched.c
 --- ../old_block/sstf-iosched.c	1969-12-31 16:00:00.000000000 -0800
-+++ ./block/sstf-iosched.c	2017-05-04 19:48:48.494880605 -0700
-@@ -0,0 +1,179 @@
++++ block/sstf-iosched.c	2017-05-08 11:44:07.531960652 -0700
+@@ -0,0 +1,182 @@
 +/*
 + * elevator sstf
 + */
@@ -103,7 +74,10 @@ diff -Nurp ../old_block/sstf-iosched.c ./block/sstf-iosched.c
 +                        }
 +
 +                }
-+		if(found) return entry;
++		if(found) {
++			nd->last_dispatched=entry->bio->bi_iter.bi_sector;
++			return entry;
++		}
 +		else return NULL;
 +}
 +
@@ -123,9 +97,9 @@ diff -Nurp ../old_block/sstf-iosched.c ./block/sstf-iosched.c
 +		list_del_init(&entry->queuelist);
 +		elv_dispatch_sort(q, entry);
 +		if(rq_data_dir(entry) == READ)
-+			printk("[CLOOK] dsp R %ld", (long int)entry->bio->bi_iter.bi_sector);
++			printk(KERN_NOTICE"[MY_LOOK] dsp R %ld", (long)entry->bio->bi_iter.bi_sector);
 +		else
-+			printk("[CLOOK] dsp W %ld", (long int)entry->bio->bi_iter.bi_sector);
++			printk(KERN_NOTICE"[MY_LOOK] dsp W %ld", (long)entry->bio->bi_iter.bi_sector);
 +		return 1;
 +	}
 +	return 0;
@@ -147,9 +121,9 @@ diff -Nurp ../old_block/sstf-iosched.c ./block/sstf-iosched.c
 +	}
 +	list_add_tail(&rq->queuelist, ptr);
 +        if(rq_data_dir(rq) == READ)
-+	        printk("[CLOOK] add R %ld", (int)rq->bio->bi_iter.bi_sector);
++	        printk(KERN_NOTICE"[MY_LOOK] add R %ld", (long)rq->bio->bi_iter.bi_sector);
 +        else
-+        	printk("[CLOOK] add W %ld", (int)rq->bio->bi_iter.bi_sector);
++        	printk(KERN_NOTICE"[MY_LOOK] add W %ld", (long)rq->bio->bi_iter.bi_sector);
 +
 +}
 +
@@ -237,4 +211,3 @@ diff -Nurp ../old_block/sstf-iosched.c ./block/sstf-iosched.c
 +MODULE_AUTHOR("Miles Van de Wetering");
 +MODULE_LICENSE("GPL");
 +MODULE_DESCRIPTION("SSTF IO scheduler");
-Binary files ../old_block/sstf-iosched.o and ./block/sstf-iosched.o differ
