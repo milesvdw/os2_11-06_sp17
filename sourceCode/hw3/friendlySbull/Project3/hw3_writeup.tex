@@ -1,0 +1,43 @@
+\documentclass[10pt,journal,onecolumn,compsoc]{IEEEtran}
+
+\title{CS444 - Homework Writeup \# 3 \\ ~ \\ ~ \\ May 22, 2017 \\ ~ \\ ~ \\ ~ \\}
+\author{\huge Group 10-05\\ ~ \\Jason Klindtworth | Brandon To | Rhea Mae Edwards\\ ~ \\}
+
+\begin{document}
+\pagenumbering{gobble}
+\maketitle
+~ \\ ~
+
+\begin{abstract}
+
+\noindent
+
+In this assignment we were tasked with creating a RAMdisk on the VM and using an SBULL Module file to create a way to encrypt data on that RAMdisk. We are supposed to be able to prove that a file that is created and moved onto a RAMdisk drive is encrypted and then when moved off of the RAMdisk it is unencrypted. This involves changing the kernel files and using RAMdisk encryption on the kernel when loading up the VM.
+
+\end{abstract}
+
+\newpage
+\pagenumbering{arabic}
+
+\section*{\textbf{Project 3: The Kernel Crypto API}} ~
+
+\subsection{\textbf{Design Plan of SBULL Algorithms}}~
+We were able to find an existing SBULL implementation to use for this project and added encryption to the code. We knew that we would need to do some manipulation of the kernel files so our first step would be to figure out what files would need to be changes and in what way. We used project 2 as a guideline and assumed we would need to do similar types of changes. This proved to be true as we needed to change the Kconfig and Makefile in /drivers/block in order to have SBULL compile as a module. From there we were able to add print statements to the correct encryption functions in SBULL to print out the encrypted data in order to prove that our solution is working.\par
+
+\subsection{\textbf{Version Control and Work Log}} ~
+The assignment was 2 weeks long. We also had a concurrency project to work on in that time. The directions were very confusing for this assignment and the documentation was very hard to come by. We decided that the best course of action would be to attempt to make separate progress on the assignment individually trying different approaches to see if any progress could be made before coming together and comparing notes. We did not really make much progress until we were able to work with other groups who were able to find some useful documents regarding the use of SBULL and kernel memory encryption. In the last week we got together with a larger group to compare notes and were able to solve the problem using a series of trial and error attempts and muddling through existing samples of code we were able to scrap together and somehow get working. \par
+
+\subsection{\textbf{Questions}}~
+\noindent Question 1: What do you think the main point of this assignment is?\par
+The main point of this assignment was to figure out how to make stuff work even when you have little to no direction or instructions. It was a very frustrating project and I feel like we spent way too much time moving in the wrong direction. There was also the obvious objective of kernel manipulation and memory management to be able to do things like encrypt data on a kernel level.\par ~
+
+\noindent Question 2: How did you personally approach the problem? Design decisions, algorithm, etc.?\par
+We knew there was going to be a relationship between the previous assignment and this one. We also knew that the instructions were going to be less then useful and the documentation online and from other sources would not be very useful. With this in mind we assumed trial and error would be the best bet and we split up to try to find any leads online that would move us in the correct direction. Eventually we were able to find some slightly useful sources from older versions of the kernel and through much frustration we were able to manipulate the code in a way that made it work in our environment. With so little documentation and us spending the whole time not really knowing what exactly we were doing did not help, and we are not really sure WHY it works, but only that we can prove that the file gets encrypted and unencrypted when it is supposed to. \par~ 
+
+\noindent Question 3: How did you ensure your solution was correct? Testing details, for instance?\par 
+We added print statements to the kernel module to print out the data that we were encrypting on the RAMdisk before and after the encryption process so we could see that the data was being encrypted properly inside the kernel.  \par ~
+
+\noindent Question 4: What did you learn?\par
+We learned how to set up a kernel module and load it during bootup. We also learned how to create a RAMdisk and make it persist between boots, even though the data is lost. Setting up and deploying a system of encryption on the kernel is still kind of confusing and we are not super sure how that is supposed to work, but we learned how to track data through the kernel and print out when that data is being encrypted and decrypted onto the console using PrintK(). \par
+
+\end{document}
