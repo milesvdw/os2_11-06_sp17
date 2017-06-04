@@ -1,0 +1,3 @@
+\contentsline {section}{\numberline {I}Assignment Description}{1}{section.1}
+\contentsline {section}{\numberline {II}Command Log and Descriptions}{1}{section.2}
+\contentsline {section}{References}{2}{section*.2}
